@@ -13,6 +13,9 @@ import (
 type Source struct {
 	Repository              string                      `json:"repository"`
 	AccessToken             string                      `json:"access_token"`
+	AppID                   int64                       `json:"app_id"`
+	AppInstallationID       int64                       `json:"app_installation_id"`
+	AppPrivateKey           string                      `json:"app_private_key"`
 	V3Endpoint              string                      `json:"v3_endpoint"`
 	V4Endpoint              string                      `json:"v4_endpoint"`
 	Paths                   []string                    `json:"paths"`
@@ -31,8 +34,15 @@ type Source struct {
 
 // Validate the source configuration.
 func (s *Source) Validate() error {
-	if s.AccessToken == "" {
-		return errors.New("access_token must be set")
+	if s.usesGithubApp() {
+		if s.AccessToken != "" {
+			return errors.New("set either access_token or the app_* fields, not both")
+		}
+		if s.AppID == 0 || s.AppPrivateKey == "" {
+			return errors.New("app_id and app_private_key must both be set to authenticate as a GitHub App")
+		}
+	} else if s.AccessToken == "" {
+		return errors.New("access_token (or app_id and app_private_key) must be set")
 	}
 	if s.Repository == "" {
 		return errors.New("repository must be set")
